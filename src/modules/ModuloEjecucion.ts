@@ -18,18 +18,45 @@ export class ModuloEjecucion {
   }
 
   /**
-   * Importa una trayectoria desde un string
+   * Importa una trayectoria desde un string y mueve el robot a la posición inicial
    * @param datos String con los datos de la trayectoria
    * @param formato Formato de los datos ('CSV' o 'JSON')
+   * @param callbackPosicionInicial Función para mover el robot a la posición inicial
    * @returns true si la importación fue exitosa
    */
-  importarTrayectoria(datos: string, formato: 'CSV' | 'JSON'): boolean {
+  importarTrayectoria(
+    datos: string, 
+    formato: 'CSV' | 'JSON',
+    callbackPosicionInicial?: (coordenadas: Coordenadas) => void
+  ): boolean {
     const nuevaTrayectoria = new Trayectoria(formato);
     if (nuevaTrayectoria.importarDatos(datos)) {
       this.trayectoriaActual = nuevaTrayectoria;
+      
+      // Mover el robot a la primera posición si hay un callback
+      if (callbackPosicionInicial) {
+        const primerPunto = this.obtenerPrimerPunto();
+        if (primerPunto) {
+          callbackPosicionInicial(primerPunto);
+        }
+      }
+      
       return true;
     }
     return false;
+  }
+
+  /**
+   * Obtiene el primer punto de la trayectoria sin avanzar el índice
+   */
+  private obtenerPrimerPunto(): Coordenadas | null {
+    if (this.trayectoriaActual) {
+      this.trayectoriaActual.reiniciar();
+      const primerPunto = this.trayectoriaActual.obtenerSiguientePunto();
+      this.trayectoriaActual.reiniciar();
+      return primerPunto;
+    }
+    return null;
   }
 
   /**

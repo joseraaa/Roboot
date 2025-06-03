@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useSimulador } from '../context/SimuladorContext';
 import { Trayectoria } from '../models/Trayectoria';
+import { ModuloEjecucion } from '../modules/ModuloEjecucion';
 
 interface PanelHerramientasProps {
   onOpenParametros: () => void;
@@ -18,12 +19,14 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
     mostrarCoordenadas,
     mostrarWorkspace,
     reiniciarSimulador,
-    coordenadas
+    coordenadas,
+    actualizarCoordenadas
   } = useSimulador();
   
   const [formatoTrayectoria, setFormatoTrayectoria] = useState<'JSON' | 'CSV'>('JSON');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mensaje, setMensaje] = useState<{ texto: string; tipo: 'success' | 'error' | 'info' } | null>(null);
+  const moduloEjecucion = useRef(new ModuloEjecucion());
 
   // Muestra un mensaje temporal
   const mostrarMensaje = (texto: string, tipo: 'success' | 'error' | 'info' = 'info') => {
@@ -47,12 +50,16 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
     reader.onload = (event) => {
       const contenido = event.target?.result as string;
       try {
-        const trayectoria = new Trayectoria(formatoTrayectoria);
-        const exito = trayectoria.importarDatos(contenido);
+        const exito = moduloEjecucion.current.importarTrayectoria(
+          contenido, 
+          formatoTrayectoria,
+          (coordenadasIniciales) => {
+            actualizarCoordenadas(coordenadasIniciales);
+          }
+        );
         
         if (exito) {
-          mostrarMensaje(`Trayectoria importada: ${trayectoria.cantidadPuntos} puntos`, 'success');
-          // Aquí se implementaría la ejecución de la trayectoria
+          mostrarMensaje(`Trayectoria importada y robot posicionado en punto inicial`, 'success');
         } else {
           mostrarMensaje('Formato de archivo inválido', 'error');
         }

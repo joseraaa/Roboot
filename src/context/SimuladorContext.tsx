@@ -12,6 +12,7 @@ interface SimuladorContextType {
   mostrarCoordenadas: boolean;
   mostrarWorkspace: boolean;
   actualizarArticulacion: (id: number, valor: number) => void;
+  actualizarCoordenadas: (coordenadas: Coordenadas) => void;
   toggleMatrices: () => void;
   toggleCoordenadas: () => void;
   toggleWorkspace: () => void;
@@ -69,6 +70,11 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
     calcularCinematicaDirecta();
   };
 
+  const actualizarCoordenadas = (nuevasCoordenadas: Coordenadas) => {
+    setCoordenadas(nuevasCoordenadas);
+    calcularCinematicaInversa(nuevasCoordenadas);
+  };
+
   const calcularCinematicaDirecta = () => {
     const theta = articulaciones[0].valorActual * Math.PI / 180;
     const z = articulaciones[1].valorActual;
@@ -82,6 +88,35 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
     const nuevaMatriz = [
       [Math.cos(theta), -Math.sin(theta), 0, x],
       [Math.sin(theta), Math.cos(theta), 0, y],
+      [0, 0, 1, z],
+      [0, 0, 0, 1]
+    ];
+    
+    setMatrizDirecta(nuevaMatriz);
+  };
+
+  const calcularCinematicaInversa = (coordenadas: Coordenadas) => {
+    const { x, y, z } = coordenadas;
+    
+    // Calcular theta (rotación de la base)
+    const theta = Math.atan2(y, x) * 180 / Math.PI;
+    
+    // Calcular r (extensión)
+    const r = Math.sqrt(x * x + y * y);
+    
+    // Actualizar articulaciones
+    setArticulaciones(prevState => {
+      const nuevasArticulaciones = [...prevState];
+      nuevasArticulaciones[0].actualizarValor(theta); // Rotación
+      nuevasArticulaciones[1].actualizarValor(z);     // Elevación
+      nuevasArticulaciones[2].actualizarValor(r);     // Extensión
+      return nuevasArticulaciones;
+    });
+    
+    // Actualizar matriz
+    const nuevaMatriz = [
+      [Math.cos(theta * Math.PI / 180), -Math.sin(theta * Math.PI / 180), 0, x],
+      [Math.sin(theta * Math.PI / 180), Math.cos(theta * Math.PI / 180), 0, y],
       [0, 0, 1, z],
       [0, 0, 0, 1]
     ];
@@ -122,6 +157,7 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
         mostrarCoordenadas,
         mostrarWorkspace,
         actualizarArticulacion,
+        actualizarCoordenadas,
         toggleMatrices,
         toggleCoordenadas,
         toggleWorkspace,

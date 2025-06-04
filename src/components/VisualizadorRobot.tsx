@@ -3,9 +3,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useSimulador } from '../context/SimuladorContext';
 
-/**
- * Componente para la visualización 3D del robot cilíndrico
- */
 export const VisualizadorRobot: React.FC = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const { 
@@ -14,29 +11,25 @@ export const VisualizadorRobot: React.FC = () => {
     mostrarWorkspace,
   } = useSimulador();
   
-  // Referencias para mantener las instancias de Three.js
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   
-  // Referencias para los grupos y elementos del robot
   const robotRef = useRef<THREE.Group | null>(null);
   const baseGiratoriaRef = useRef<THREE.Group | null>(null);
   const ejeVerticalRef = useRef<THREE.Group | null>(null);
   const brazoExtensibleRef = useRef<THREE.Group | null>(null);
   const workspaceRef = useRef<THREE.Mesh | null>(null);
-  
+
   // Inicialización de Three.js
   useEffect(() => {
     if (!canvasRef.current) return;
     
-    // Configuración de la escena
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
     sceneRef.current = scene;
     
-    // Configuración de la cámara
     const camera = new THREE.PerspectiveCamera(
       60, 
       canvasRef.current.clientWidth / canvasRef.current.clientHeight, 
@@ -47,7 +40,6 @@ export const VisualizadorRobot: React.FC = () => {
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
     
-    // Configuración del renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
     renderer.shadowMap.enabled = true;
@@ -55,7 +47,6 @@ export const VisualizadorRobot: React.FC = () => {
     canvasRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
     
-    // Controles de órbita
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -63,7 +54,6 @@ export const VisualizadorRobot: React.FC = () => {
     controls.maxDistance = 10;
     controlsRef.current = controls;
     
-    // Iluminación
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
     
@@ -80,7 +70,6 @@ export const VisualizadorRobot: React.FC = () => {
     directionalLight.shadow.camera.bottom = -10;
     scene.add(directionalLight);
     
-    // Plano del suelo
     const planoGeometria = new THREE.PlaneGeometry(10, 10);
     const planoMaterial = new THREE.MeshStandardMaterial({ 
       color: 0xcccccc,
@@ -92,17 +81,14 @@ export const VisualizadorRobot: React.FC = () => {
     plano.receiveShadow = true;
     scene.add(plano);
     
-    // Rejilla y ejes para referencia
     const gridHelper = new THREE.GridHelper(10, 10, 0x555555, 0x888888);
     scene.add(gridHelper);
     
     const axesHelper = new THREE.AxesHelper(2);
     scene.add(axesHelper);
     
-    // Crear el modelo del robot
     crearModeloRobot(scene);
     
-    // Espacio de trabajo (invisible inicialmente)
     const workspaceGeometry = new THREE.CylinderGeometry(
       parametros.longitudBrazo,
       parametros.longitudBrazo,
@@ -124,7 +110,6 @@ export const VisualizadorRobot: React.FC = () => {
     scene.add(workspace);
     workspaceRef.current = workspace;
     
-    // Función de animación
     const animate = () => {
       requestAnimationFrame(animate);
       if (controlsRef.current) {
@@ -136,7 +121,6 @@ export const VisualizadorRobot: React.FC = () => {
     };
     animate();
     
-    // Cleanup
     return () => {
       if (rendererRef.current && canvasRef.current) {
         canvasRef.current.removeChild(rendererRef.current.domElement);
@@ -145,16 +129,11 @@ export const VisualizadorRobot: React.FC = () => {
     };
   }, []);
   
-  /**
-   * Crea el modelo 3D del robot cilíndrico
-   */
   const crearModeloRobot = (scene: THREE.Scene) => {
-    // Grupo principal del robot
     const robotGrupo = new THREE.Group();
     robotRef.current = robotGrupo;
     scene.add(robotGrupo);
     
-    // Base fija
     const baseGeometria = new THREE.CylinderGeometry(
       parametros.radioBase * 1.2,
       parametros.radioBase * 1.4,
@@ -172,7 +151,6 @@ export const VisualizadorRobot: React.FC = () => {
     baseFija.receiveShadow = true;
     robotGrupo.add(baseFija);
     
-    // Base giratoria
     const baseGiratoriaGrupo = new THREE.Group();
     robotGrupo.add(baseGiratoriaGrupo);
     baseGiratoriaRef.current = baseGiratoriaGrupo;
@@ -197,7 +175,6 @@ export const VisualizadorRobot: React.FC = () => {
     baseGiratoriaCilindro.receiveShadow = true;
     baseGiratoriaGrupo.add(baseGiratoriaCilindro);
     
-    // Eje vertical (columna)
     const ejeVerticalGrupo = new THREE.Group();
     ejeVerticalGrupo.position.y = 0.3;
     baseGiratoriaGrupo.add(ejeVerticalGrupo);
@@ -215,13 +192,11 @@ export const VisualizadorRobot: React.FC = () => {
     columna.receiveShadow = true;
     ejeVerticalGrupo.add(columna);
     
-    // Brazo extensible
     const brazoGrupo = new THREE.Group();
     brazoGrupo.position.y = 1;
     ejeVerticalGrupo.add(brazoGrupo);
     brazoExtensibleRef.current = brazoGrupo;
     
-    // Articulación del brazo
     const articulacionGeometria = new THREE.BoxGeometry(0.2, 0.2, 0.2);
     const articulacionMaterial = new THREE.MeshStandardMaterial({
       color: 0xe74c3c,
@@ -233,7 +208,6 @@ export const VisualizadorRobot: React.FC = () => {
     articulacion.receiveShadow = true;
     brazoGrupo.add(articulacion);
     
-    // Brazo extensible
     const brazoGeometria = new THREE.BoxGeometry(0.1, 0.1, 1);
     const brazoMaterial = new THREE.MeshStandardMaterial({
       color: 0x3498db,
@@ -246,7 +220,6 @@ export const VisualizadorRobot: React.FC = () => {
     brazo.receiveShadow = true;
     brazoGrupo.add(brazo);
     
-    // Efector final
     const efectorGeometria = new THREE.SphereGeometry(0.05, 16, 16);
     const efectorMaterial = new THREE.MeshStandardMaterial({
       color: 0xf1c40f,
@@ -260,15 +233,12 @@ export const VisualizadorRobot: React.FC = () => {
     brazoGrupo.add(efector);
   };
   
-  // Actualiza el modelo del robot cuando cambian las articulaciones
   useEffect(() => {
     if (!baseGiratoriaRef.current || !ejeVerticalRef.current || !brazoExtensibleRef.current) return;
     
-    // Rotación de la base (theta)
     const theta = articulaciones[0].valorActual * Math.PI / 180;
     baseGiratoriaRef.current.rotation.y = theta;
     
-    // Elevación vertical (z)
     const z = articulaciones[1].valorActual;
     if (ejeVerticalRef.current) {
       const alturaColumna = z;
@@ -280,7 +250,6 @@ export const VisualizadorRobot: React.FC = () => {
       }
     }
     
-    // Extensión del brazo (r)
     const r = articulaciones[2].valorActual;
     if (brazoExtensibleRef.current) {
       brazoExtensibleRef.current.children[1].scale.z = r;
@@ -289,7 +258,6 @@ export const VisualizadorRobot: React.FC = () => {
     }
   }, [articulaciones]);
   
-  // Actualiza la visualización del espacio de trabajo
   useEffect(() => {
     if (!workspaceRef.current) return;
     
@@ -308,7 +276,6 @@ export const VisualizadorRobot: React.FC = () => {
     
   }, [mostrarWorkspace, parametros]);
   
-  // Actualización del tamaño del canvas
   useEffect(() => {
     const handleResize = () => {
       if (!canvasRef.current || !cameraRef.current || !rendererRef.current) return;

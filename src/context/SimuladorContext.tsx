@@ -153,7 +153,7 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
     if (config) {
       setParametros(config.parametros);
       setArticulaciones(config.articulaciones);
-      calcularCinematicaDirecta();
+      calcularCinematicaDirecta(); // Actualiza el modelo 3D y los valores visuales
       return true;
     }
     return false;

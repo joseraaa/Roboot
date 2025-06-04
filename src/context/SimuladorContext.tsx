@@ -3,6 +3,7 @@ import { Coordenadas } from '../models/Coordenadas';
 import { Articulacion } from '../models/Articulacion';
 import { ParametrosCinematica } from '../models/ParametrosCinematica';
 import { ConfiguracionRobot, GestorConfiguracion } from '../models/ConfiguracionRobot';
+import { GestorTrayectorias } from '../models/GestorTrayectorias';
 
 interface SimuladorContextType {
   articulaciones: Articulacion[];
@@ -21,6 +22,12 @@ interface SimuladorContextType {
   reiniciarSimulador: () => void;
   exportarConfiguracion: () => Blob;
   importarConfiguracion: (contenido: string) => boolean;
+  grabarPuntoTrayectoria: () => void;
+  limpiarTrayectoria: () => void;
+  ejecutarTrayectoria: () => Promise<void>;
+  detenerTrayectoria: () => void;
+  trayectoriaEnEjecucion: boolean;
+  cantidadPuntosTrayectoria: number;
 }
 
 const parametrosIniciales: ParametrosCinematica = {
@@ -59,6 +66,9 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
   const [mostrarMatrices, setMostrarMatrices] = useState(false);
   const [mostrarCoordenadas, setMostrarCoordenadas] = useState(true);
   const [mostrarWorkspace, setMostrarWorkspace] = useState(false);
+  const [trayectoriaEnEjecucion, setTrayectoriaEnEjecucion] = useState(false);
+
+  const gestorTrayectorias = React.useRef(new GestorTrayectorias());
 
   const actualizarArticulacion = (id: number, valor: number) => {
     setArticulaciones(prevState => {
@@ -138,6 +148,7 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
     setArticulaciones(articulacionesIniciales.map(a => new Articulacion(a.id, a.tipo, a.valorActual, a.limiteInferior, a.limiteSuperior)));
     setParametros({...parametrosIniciales});
     calcularCinematicaDirecta();
+    gestorTrayectorias.current.limpiarTrayectoria();
   };
 
   const exportarConfiguracion = (): Blob => {
@@ -153,10 +164,34 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
     if (config) {
       setParametros(config.parametros);
       setArticulaciones(config.articulaciones);
-      calcularCinematicaDirecta(); // Actualiza el modelo 3D y los valores visuales
+      calcularCinematicaDirecta();
       return true;
     }
     return false;
+  };
+
+  const grabarPuntoTrayectoria = () => {
+    gestorTrayectorias.current.agregarPunto(articulaciones);
+  };
+
+  const limpiarTrayectoria = () => {
+    gestorTrayectorias.current.limpiarTrayectoria();
+  };
+
+  const ejecutarTrayectoria = async () => {
+    if (gestorTrayectorias.current.cantidadPuntos < 2) return;
+    
+    setTrayectoriaEnEjecucion(true);
+    await gestorTrayectorias.current.ejecutarTrayectoria((articulacionesNuevas) => {
+      setArticulaciones(articulacionesNuevas);
+      calcularCinematicaDirecta();
+    });
+    setTrayectoriaEnEjecucion(false);
+  };
+
+  const detenerTrayectoria = () => {
+    gestorTrayectorias.current.detenerEjecucion();
+    setTrayectoriaEnEjecucion(false);
   };
 
   React.useEffect(() => {
@@ -181,7 +216,13 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
         actualizarParametros,
         reiniciarSimulador,
         exportarConfiguracion,
-        importarConfiguracion
+        importarConfiguracion,
+        grabarPuntoTrayectoria,
+        limpiarTrayectoria,
+        ejecutarTrayectoria,
+        detenerTrayectoria,
+        trayectoriaEnEjecucion,
+        cantidadPuntosTrayectoria: gestorTrayectorias.current.cantidadPuntos
       }}
     >
       {children}

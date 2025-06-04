@@ -7,9 +7,6 @@ interface PanelHerramientasProps {
   onOpenParametros: () => void;
 }
 
-/**
- * Componente para las herramientas de configuración y control del robot
- */
 export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenParametros }) => {
   const { 
     toggleMatrices, 
@@ -22,7 +19,13 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
     coordenadas,
     actualizarCoordenadas,
     exportarConfiguracion,
-    importarConfiguracion
+    importarConfiguracion,
+    grabarPuntoTrayectoria,
+    limpiarTrayectoria,
+    ejecutarTrayectoria,
+    detenerTrayectoria,
+    trayectoriaEnEjecucion,
+    cantidadPuntosTrayectoria
   } = useSimulador();
   
   const [formatoTrayectoria, setFormatoTrayectoria] = useState<'JSON' | 'CSV'>('JSON');
@@ -132,6 +135,25 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
     e.target.value = '';
   };
 
+  const handleGrabarPunto = () => {
+    grabarPuntoTrayectoria();
+    mostrarMensaje('Punto grabado en la trayectoria', 'success');
+  };
+
+  const handleEjecutarTrayectoria = async () => {
+    if (cantidadPuntosTrayectoria < 2) {
+      mostrarMensaje('Se necesitan al menos 2 puntos para ejecutar una trayectoria', 'error');
+      return;
+    }
+    
+    try {
+      await ejecutarTrayectoria();
+      mostrarMensaje('Trayectoria completada', 'success');
+    } catch (error) {
+      mostrarMensaje('Error al ejecutar la trayectoria', 'error');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-blue-900 border-b pb-2">Herramientas</h2>
@@ -182,6 +204,41 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
           </button>
         </div>
         <div className="flex flex-col gap-2">
+          <button 
+            className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            onClick={handleGrabarPunto}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            Grabar Punto ({cantidadPuntosTrayectoria} puntos)
+          </button>
+
+          <button 
+            className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            onClick={handleEjecutarTrayectoria}
+            disabled={trayectoriaEnEjecucion || cantidadPuntosTrayectoria < 2}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            {trayectoriaEnEjecucion ? 'Ejecutando...' : 'Ejecutar Trayectoria'}
+          </button>
+
+          {trayectoriaEnEjecucion && (
+            <button 
+              className="flex items-center px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              onClick={detenerTrayectoria}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+              Detener Trayectoria
+            </button>
+          )}
+
+          <button 
+            className="flex items-center px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            onClick={limpiarTrayectoria}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            Limpiar Trayectoria
+          </button>
+
           <button 
             className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
             onClick={handleImportar}

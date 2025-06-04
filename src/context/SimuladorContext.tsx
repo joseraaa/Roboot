@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Coordenadas } from '../models/Coordenadas';
 import { Articulacion } from '../models/Articulacion';
 import { ParametrosCinematica } from '../models/ParametrosCinematica';
+import { ConfiguracionRobot, GestorConfiguracion } from '../models/ConfiguracionRobot';
 
 interface SimuladorContextType {
   articulaciones: Articulacion[];
@@ -18,19 +19,21 @@ interface SimuladorContextType {
   toggleWorkspace: () => void;
   actualizarParametros: (nuevosParametros: Partial<ParametrosCinematica>) => void;
   reiniciarSimulador: () => void;
+  exportarConfiguracion: () => Blob;
+  importarConfiguracion: (contenido: string) => boolean;
 }
 
 const parametrosIniciales: ParametrosCinematica = {
-  longitudBase: 0.1,    // Altura inicial del eje vertical
-  longitudBrazo: 0.6,   // Extensión máxima del brazo
-  radioBase: 0.15,      // Radio de la base
-  alturaMaxima: 0.5     // Altura máxima del eje vertical
+  longitudBase: 0.1,
+  longitudBrazo: 0.6,
+  radioBase: 0.15,
+  alturaMaxima: 0.5
 };
 
 const articulacionesIniciales: Articulacion[] = [
-  new Articulacion(0, 'rotacional', 0, -180, 180),   // Base rotacional (theta)
-  new Articulacion(1, 'lineal', 0.1, 0.1, 0.5),      // Elevación (z)
-  new Articulacion(2, 'lineal', 0.1, 0.1, 0.6)       // Extensión (r)
+  new Articulacion(0, 'rotacional', 0, -180, 180),
+  new Articulacion(1, 'lineal', 0.1, 0.1, 0.5),
+  new Articulacion(2, 'lineal', 0.1, 0.1, 0.6)
 ];
 
 const SimuladorContext = createContext<SimuladorContextType | undefined>(undefined);
@@ -98,22 +101,17 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
   const calcularCinematicaInversa = (coordenadas: Coordenadas) => {
     const { x, y, z } = coordenadas;
     
-    // Calcular theta (rotación de la base)
     const theta = Math.atan2(y, x) * 180 / Math.PI;
-    
-    // Calcular r (extensión)
     const r = Math.sqrt(x * x + y * y);
     
-    // Actualizar articulaciones
     setArticulaciones(prevState => {
       const nuevasArticulaciones = [...prevState];
-      nuevasArticulaciones[0].actualizarValor(theta); // Rotación
-      nuevasArticulaciones[1].actualizarValor(z);     // Elevación
-      nuevasArticulaciones[2].actualizarValor(r);     // Extensión
+      nuevasArticulaciones[0].actualizarValor(theta);
+      nuevasArticulaciones[1].actualizarValor(z);
+      nuevasArticulaciones[2].actualizarValor(r);
       return nuevasArticulaciones;
     });
     
-    // Actualizar matriz
     const nuevaMatriz = [
       [Math.cos(theta * Math.PI / 180), -Math.sin(theta * Math.PI / 180), 0, x],
       [Math.sin(theta * Math.PI / 180), Math.cos(theta * Math.PI / 180), 0, y],
@@ -142,6 +140,25 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
     calcularCinematicaDirecta();
   };
 
+  const exportarConfiguracion = (): Blob => {
+    const config: ConfiguracionRobot = {
+      parametros,
+      articulaciones
+    };
+    return GestorConfiguracion.exportarConfiguracion(config);
+  };
+
+  const importarConfiguracion = (contenido: string): boolean => {
+    const config = GestorConfiguracion.importarConfiguracion(contenido);
+    if (config) {
+      setParametros(config.parametros);
+      setArticulaciones(config.articulaciones);
+      calcularCinematicaDirecta();
+      return true;
+    }
+    return false;
+  };
+
   React.useEffect(() => {
     calcularCinematicaDirecta();
   }, []);
@@ -162,7 +179,9 @@ export const SimuladorProvider = ({ children }: { children: ReactNode }) => {
         toggleCoordenadas,
         toggleWorkspace,
         actualizarParametros,
-        reiniciarSimulador
+        reiniciarSimulador,
+        exportarConfiguracion,
+        importarConfiguracion
       }}
     >
       {children}

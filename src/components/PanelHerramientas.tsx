@@ -20,28 +20,28 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
     mostrarWorkspace,
     reiniciarSimulador,
     coordenadas,
-    actualizarCoordenadas
+    actualizarCoordenadas,
+    exportarConfiguracion,
+    importarConfiguracion
   } = useSimulador();
   
   const [formatoTrayectoria, setFormatoTrayectoria] = useState<'JSON' | 'CSV'>('JSON');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const configFileInputRef = useRef<HTMLInputElement>(null);
   const [mensaje, setMensaje] = useState<{ texto: string; tipo: 'success' | 'error' | 'info' } | null>(null);
   const moduloEjecucion = useRef(new ModuloEjecucion());
 
-  // Muestra un mensaje temporal
   const mostrarMensaje = (texto: string, tipo: 'success' | 'error' | 'info' = 'info') => {
     setMensaje({ texto, tipo });
     setTimeout(() => setMensaje(null), 3000);
   };
 
-  // Maneja la importación de trayectoria
   const handleImportar = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Procesa el archivo seleccionado
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -59,7 +59,7 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
         );
         
         if (exito) {
-          mostrarMensaje(`Trayectoria importada y robot posicionado en punto inicial`, 'success');
+          mostrarMensaje('Trayectoria importada y robot posicionado en punto inicial', 'success');
         } else {
           mostrarMensaje('Formato de archivo inválido', 'error');
         }
@@ -68,12 +68,9 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
       }
     };
     reader.readAsText(file);
-    
-    // Limpiar input para permitir cargar el mismo archivo nuevamente
     e.target.value = '';
   };
 
-  // Exporta la posición actual como un punto de trayectoria
   const handleExportar = () => {
     const trayectoria = new Trayectoria(formatoTrayectoria);
     trayectoria.agregarPunto(coordenadas);
@@ -95,23 +92,50 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
     mostrarMensaje('Punto de trayectoria exportado', 'success');
   };
 
-  // Exporta la configuración actual del robot
   const handleGuardarConfiguracion = () => {
-    // Implementación para guardar la configuración actual
+    const blob = exportarConfiguracion();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'configuracion-robot.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     mostrarMensaje('Configuración guardada', 'success');
   };
 
-  // Carga una configuración previa del robot
   const handleCargarConfiguracion = () => {
-    // Implementación para cargar una configuración
-    mostrarMensaje('Configuración cargada', 'success');
+    if (configFileInputRef.current) {
+      configFileInputRef.current.click();
+    }
+  };
+
+  const handleConfigFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const contenido = event.target?.result as string;
+      try {
+        if (importarConfiguracion(contenido)) {
+          mostrarMensaje('Configuración cargada exitosamente', 'success');
+        } else {
+          mostrarMensaje('Formato de configuración inválido', 'error');
+        }
+      } catch (error) {
+        mostrarMensaje('Error al cargar la configuración', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-blue-900 border-b pb-2">Herramientas</h2>
       
-      {/* Visualización */}
       <div className="space-y-2">
         <h3 className="font-medium text-gray-800">Visualización</h3>
         <div className="flex flex-col gap-2">
@@ -141,7 +165,6 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
         </div>
       </div>
       
-      {/* Trayectorias */}
       <div className="space-y-2">
         <h3 className="font-medium text-gray-800">Trayectorias</h3>
         <div className="flex mb-2 space-x-2">
@@ -184,7 +207,6 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
         </div>
       </div>
       
-      {/* Configuración */}
       <div className="space-y-2">
         <h3 className="font-medium text-gray-800">Configuración</h3>
         <div className="flex flex-col gap-2">
@@ -203,6 +225,13 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
             Cargar Configuración
           </button>
+          <input 
+            ref={configFileInputRef}
+            type="file" 
+            accept=".json" 
+            className="hidden"
+            onChange={handleConfigFileChange}
+          />
           
           <button 
             className="flex items-center px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
@@ -222,7 +251,6 @@ export const PanelHerramientas: React.FC<PanelHerramientasProps> = ({ onOpenPara
         </div>
       </div>
       
-      {/* Mensajes de estado */}
       {mensaje && (
         <div className={`mt-4 p-3 rounded-md ${
           mensaje.tipo === 'success' ? 'bg-green-100 text-green-800' : 
